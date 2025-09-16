@@ -21,6 +21,10 @@
     "typescript": "~5.9.2",
     "unplugin-unused": "~0.5.3"
   },
+  "exports": {
+    ".": "./dist/main.js",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist"
   ],
@@ -44,6 +48,8 @@
   ],
   "homepage": "https://github.com/EDM115/light-odometer#readme",
   "license": "MIT",
+  "main": "./dist/main.js",
+  "module": "./dist/main.js",
   "name": "light-odometer",
   "packageManager": "pnpm@10.16.1",
   "publishConfig": {
@@ -55,20 +61,14 @@
   },
   "scripts": {
     "build": "tsdown",
+    "format": "eslint -c eslint.stylistic.config.ts --concurrency=auto --fix .",
     "lint": "oxlint --type-aware .",
     "lint:fix": "oxlint --fix --type-aware .",
-    "format": "eslint -c eslint.stylistic.config.ts --concurrency=auto --fix .",
     "prepublishOnly": "pnpm build",
     "release": "pnpm publish",
     "typecheck": "tsc --noEmit"
   },
   "type": "module",
-  "version": "0.0.1",
-  "main": "./dist/main.js",
-  "module": "./dist/main.js",
   "types": "./dist/main.d.ts",
-  "exports": {
-    ".": "./dist/main.js",
-    "./package.json": "./package.json"
-  }
+  "version": "0.0.2"
 }

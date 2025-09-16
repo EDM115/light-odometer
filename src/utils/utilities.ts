@@ -1,4 +1,4 @@
-import type { TmOdometer } from "../core/odometer"
+import type { LightOdometer } from "../core/odometer"
 
 /**
  * Creates an HTML element from the given HTML string.
@@ -7,16 +7,16 @@ import type { TmOdometer } from "../core/odometer"
  * @returns {HTMLElement} The first child element created from the HTML string.
  * @throws {Error} If the HTML string is empty or does not contain a valid element.
  */
-const createFromHTML = (html: string): HTMLElement => {
+function createFromHTML(html: string): HTMLElement {
   const el = document.createElement("div")
 
   el.innerHTML = html
 
-  if (!el.children[0]) {
+  if (!(el.firstElementChild instanceof HTMLElement)) {
     throw new Error("Invalid HTML: No valid root element found.")
   }
 
-  return el.children[0] as HTMLElement
+  return el.firstElementChild
 }
 
 /**
@@ -26,11 +26,15 @@ const createFromHTML = (html: string): HTMLElement => {
  * @param {string} name - A space-separated string of class names to remove.
  * @returns {string} The updated `className` string of the element (may contain leading/trailing spaces).
  */
-const removeClass = (el: HTMLElement, name: string): string => (el.className = el.className.replace(
-  new RegExp(`(^| )${name.split(" ")
-    .join("|")}( |$)`, "gi"),
-  " ",
-))
+function removeClass(el: HTMLElement, name: string): string {
+  el.className = el.className.replace(
+    new RegExp(`(^| )${name.split(" ")
+      .join("|")}( |$)`, "gi"),
+    " ",
+  )
+
+  return el.className
+}
 
 /**
  * Adds one or more class names to an element.
@@ -39,7 +43,7 @@ const removeClass = (el: HTMLElement, name: string): string => (el.className = e
  * @param {string} name - A space-separated string of class names to add.
  * @returns {string} The updated `className` string of the element (may contain leading/trailing spaces).
  */
-const addClass = (el: HTMLElement, name: string): string => {
+function addClass(el: HTMLElement, name: string): string {
   removeClass(el, name)
 
   return (el.className += ` ${name}`)
@@ -47,25 +51,15 @@ const addClass = (el: HTMLElement, name: string): string => {
 
 /**
  * Triggers a custom DOM event on the specified element.
- * Supports modern browsers and provides a fallback for older browsers (e.g., IE9+).
  * @param {HTMLElement} el - The element on which to dispatch the event.
  * @param {string} name - The name of the event to trigger.
  */
-const trigger = (el: HTMLElement, name: string): void => {
-  // Custom DOM events are not supported in IE8
-  if (typeof CustomEvent === "function") {
-    const evt = new CustomEvent(name, {
-      bubbles: true, cancelable: true,
-    })
+function trigger(el: HTMLElement, name: string): void {
+  const evt = new CustomEvent(name, {
+    bubbles: true, cancelable: true,
+  })
 
-    el.dispatchEvent(evt)
-  } else if (document.createEvent) {
-    // Legacy fallback
-    const evt = document.createEvent("HTMLEvents")
-
-    evt.initEvent(name, true, true)
-    el.dispatchEvent(evt)
-  }
+  el.dispatchEvent(evt)
 }
 
 /**
@@ -74,7 +68,7 @@ const trigger = (el: HTMLElement, name: string): void => {
  * falling back to `Date.now()` if not.
  * @returns {number} The current timestamp in milliseconds.
  */
-const now = (): number => {
+function now(): number {
   const left = window.performance?.now?.()
 
   return left ?? +new Date()
@@ -87,7 +81,7 @@ const now = (): number => {
  * @param {number} [precision=0] - The number of decimal places to round to. Defaults to 0.
  * @returns {number} The rounded number.
  */
-const round = (val: number, precision?: number): number => {
+function round(val: number, precision?: number): number {
   precision ??= 0
 
   if (!precision) {
@@ -108,7 +102,7 @@ const round = (val: number, precision?: number): number => {
  * @param {number} val - The number to truncate.
  * @returns {number} The truncated number.
  */
-const truncate = (val: number): number => {
+function truncate(val: number): number {
   // | 0 fails on numbers greater than 2^32
   if (val < 0) {
     return Math.ceil(val)
@@ -123,67 +117,47 @@ const truncate = (val: number): number => {
  * @param {number} val - The number to extract the fractional part from.
  * @returns {number} The fractional part of the number.
  */
-const fractionalPart = (val: number): number => val - round(val)
+function fractionalPart(val: number): number {
+  return val - round(val)
+}
 
 /**
- * Initializes global options for the provided `TmOdometer` class with a deferred execution.
- * Sets the static `options` object of the `TmOdometer` class based on `window.odometerOptions`.
+ * Initializes global options for the provided `LightOdometer` class with a deferred execution.
+ * Sets the static `options` object of the `LightOdometer` class based on `window.odometerOptions`.
  * This allows users to configure `window.odometerOptions` after the script has been loaded.
  * The function re-checks `window.odometerOptions` after a short timeout to apply any late configurations.
- * @param {typeof TmOdometer} TmOdometerClass - The `TmOdometer` class to initialize options for.
+ * @param {typeof LightOdometer} LightOdometerClass - The `LightOdometer` class to initialize options for.
  * @returns {void}
  */
-const initGlobalOptionsDeferred = (TmOdometerClass: typeof TmOdometer): void => {
+function initGlobalOptionsDeferred(LightOdometerClass: typeof LightOdometer): void {
   setTimeout(() => {
     // We do this in a separate pass to allow people to set
     // window.odometerOptions after bringing the file in.
     if (window.odometerOptions) {
-      for (const key in window.odometerOptions) {
-        TmOdometerClass.options[key] ??= window.odometerOptions[key]
+      LightOdometerClass.options = {
+        ...LightOdometerClass.options,
+        ...window.odometerOptions,
       }
     }
   }, 0)
 }
 
 /**
- * Initializes all existing `TmOdometer` instances on the page when the DOM is fully loaded.
- * Supports both modern browsers and legacy browsers (e.g., IE < 9).
- * Ensures that initialization occurs after the DOM is ready, using `DOMContentLoaded` for modern browsers
- * and `onreadystatechange` for older browsers.
- * @param {typeof TmOdometer} TmOdometerClass - The `TmOdometer` class to initialize instances for.
+ * Initializes all existing `LightOdometer` instances on the page when the DOM is fully loaded.
+ * Ensures that initialization occurs after the DOM is ready.
+ * @param {typeof LightOdometer} LightOdometerClass - The `LightOdometer` class to initialize instances for.
  * @returns {void}
  */
-const initExistingOdometers = (TmOdometerClass: typeof TmOdometer): void => {
-  // Check for legacy IE < 9
-  if (document.documentElement?.doScroll && document.createEventObject) {
-    // Use `onreadystatechange` for legacy browsers
-    const _old = document.onreadystatechange
-
-    document.onreadystatechange = function () {
-      if (
-        document.readyState === "complete"
-        && TmOdometerClass.options.auto !== false
-      ) {
-        TmOdometerClass.init()
+function initExistingOdometers(LightOdometerClass: typeof LightOdometer): void {
+  document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+      if (LightOdometerClass.options.auto !== false) {
+        LightOdometerClass.init()
       }
-
-      // Call the previous handler if it exists
-      if (_old) {
-        _old?.apply(this, arguments as any)
-      }
-    }
-  } else {
-    // Use `DOMContentLoaded` for modern browsers
-    document.addEventListener(
-      "DOMContentLoaded",
-      function () {
-        if (TmOdometerClass.options.auto !== false) {
-          TmOdometerClass.init()
-        }
-      },
-      false,
-    )
-  }
+    },
+    false,
+  )
 }
 
 export {

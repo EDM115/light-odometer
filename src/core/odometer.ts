@@ -1,11 +1,12 @@
 import type {
   FormatObject,
-  OdometerOptions,
-  TmOdometerOptions,
+  LightOdometerOptions,
 } from "../shared/interfaces"
+
 import {
   DIGIT_HTML, FORMAT_MARK_HTML,
 } from "../shared/templates"
+
 import {
   DIGIT_FORMAT,
   FORMAT_PARSER,
@@ -15,12 +16,7 @@ import {
   MS_PER_FRAME,
   COUNT_MS_PER_FRAME,
 } from "../shared/settings"
-import {
-  TRANSITION_END_EVENTS,
-  TRANSITION_SUPPORT,
-  requestAnimationFrame,
-  MutationObserver,
-} from "../utils/compatibility"
+
 import {
   createFromHTML,
   removeClass,
@@ -33,10 +29,10 @@ import {
   initExistingOdometers,
 } from "../utils/utilities"
 
-class TmOdometer {
-  static options: OdometerOptions = window.odometerOptions ?? {}
+class LightOdometer {
+  static options: Omit<LightOdometerOptions, "el"> = window.odometerOptions ?? {}
 
-  options: TmOdometerOptions
+  options: LightOdometerOptions
   el: HTMLElement
   value: number = 0
   inside!: HTMLElement
@@ -52,12 +48,12 @@ class TmOdometer {
   ribbons: Record<number, HTMLElement> = {}
 
   /**
-   * Initializes a new instance of the TmOdometer class.
+   * Initializes a new instance of the LightOdometer class.
    * Sets up the odometer's options, formats, and DOM structure.
    * If an odometer instance already exists on the element, it returns the existing instance.
-   * @param {TmOdometerOptions} options - Configuration options for the odometer.
+   * @param {LightOdometerOptions} options - Configuration options for the odometer.
    */
-  constructor(options: TmOdometerOptions) {
+  constructor(options: LightOdometerOptions) {
     this.options = options
     this.el = this.options.el
 
@@ -67,15 +63,17 @@ class TmOdometer {
 
     this.el.odometer = this
 
-    for (const key in TmOdometer.options) {
-      const value = TmOdometer.options[key]
+    this.options = {
+      ...LightOdometer.options,
+      ...this.options,
+    }
 
-      this.options[key] ??= value
+    if (this.options.value == null && LightOdometer.options.value != null) {
+      this.options.value = LightOdometer.options.value
     }
 
     this.options.duration ??= DURATION
-    this.MAX_VALUES
-      = (this.options.duration / MS_PER_FRAME / FRAMES_PER_VALUE) | 0
+    this.MAX_VALUES = (this.options.duration / MS_PER_FRAME / FRAMES_PER_VALUE) | 0
 
     this.resetFormat()
 
@@ -85,15 +83,16 @@ class TmOdometer {
     this.render()
 
     try {
-      for (const property of [ "innerHTML", "innerText", "textContent" ]) {
-        if (this.el[property as keyof HTMLElement]) {
+      const WRAPPED_PROPS = [ "innerHTML", "innerText", "textContent" ] as const
+
+      for (const property of WRAPPED_PROPS) {
+        if (this.el[property]) {
           Object.defineProperty(this.el, property, {
             "get": (): string => {
               if (property === "innerHTML") {
                 return this.inside.outerHTML
               } else {
-                // It's just a single HTML element, so innerText is the
-                // same as outerText.
+                // It's just a single HTML element, so innerText is the same as outerText.
                 return this.inside.innerText ?? this.inside.textContent ?? ""
               }
             },
@@ -103,7 +102,7 @@ class TmOdometer {
           })
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // Safari
       this.watchForMutations()
     }
@@ -111,8 +110,7 @@ class TmOdometer {
 
   /**
    * Renders the inner container of the odometer.
-   * Clears the root element (`this.el`) and appends a new child element
-   * with the class `odometer-inside`.
+   * Clears the root element (`this.el`) and appends a new child element with the class `odometer-inside`.
    * @returns {void}
    */
   renderInside(): void {
@@ -128,10 +126,6 @@ class TmOdometer {
    * @returns {void}
    */
   watchForMutations(): void {
-    if (!MutationObserver) {
-      return
-    }
-
     try {
       this.observer ??= new MutationObserver((_mutations) => {
         const newVal = this.el.innerText || ""
@@ -143,8 +137,8 @@ class TmOdometer {
 
       this.watchMutations = true
       this.startWatchingMutations()
-    } catch (e) {
-      // nothing ?
+    } catch (_e) {
+      // ? nothing
     }
   }
 
@@ -171,15 +165,13 @@ class TmOdometer {
 
   /**
    * Cleans and normalizes a value to ensure it can be processed as a number.
-   * Converts formatted strings into numeric values by handling radix symbols
-   * and removing unnecessary characters.
+   * Converts formatted strings into numeric values by handling radix symbols and removing unnecessary characters.
    * @param {string | number} val - The value to clean and normalize.
    * @returns {number} The cleaned and rounded numeric value.
    */
   cleanValue(val: string | number): number {
     if (typeof val === "string") {
-      // We need to normalize the format so we can properly turn it into
-      // a float.
+      // We need to normalize the format so we can properly turn it into a float.
       val = val.replace(this.format.radix ?? ".", "<radix>")
       val = val.replace(/[.,]/g, "")
       val = val.replace("<radix>", ".")
@@ -191,9 +183,7 @@ class TmOdometer {
 
   /**
    * Binds transition end events to the root element (`this.el`).
-   * Ensures that the odometer re-renders only once per transition, even if multiple
-   * transition end events are triggered. After rendering, it dispatches the
-   * `odometerdone` custom event.
+   * Ensures that the odometer re-renders only once per transition, even if multiple transition end events are triggered. After rendering, it dispatches the `odometerdone` custom event.
    * @returns {void}
    */
   bindTransitionEnd(): void {
@@ -203,32 +193,28 @@ class TmOdometer {
 
     this.transitionEndBound = true
 
-    // The event will be triggered once for each ribbon, we only
-    // want one render though
+    // The event will be triggered once for each ribbon, we only want one render though
     let renderEnqueued = false
-    const events = TRANSITION_END_EVENTS.split(" ")
 
-    for (const event of events) {
-      this.el.addEventListener(
-        event,
-        () => {
-          if (renderEnqueued) {
-            return true
-          }
-
-          renderEnqueued = true
-
-          setTimeout(() => {
-            this.render()
-            renderEnqueued = false
-            trigger(this.el, "odometerdone")
-          }, 0)
-
+    this.el.addEventListener(
+      "transitionend",
+      () => {
+        if (renderEnqueued) {
           return true
-        },
-        false,
-      )
-    }
+        }
+
+        renderEnqueued = true
+
+        setTimeout(() => {
+          this.render()
+          renderEnqueued = false
+          trigger(this.el, "odometerdone")
+        }, 0)
+
+        return true
+      },
+      false,
+    )
   }
 
   /**
@@ -245,7 +231,7 @@ class TmOdometer {
     const parsed = FORMAT_PARSER.exec(format)
 
     if (!parsed) {
-      throw new Error("TmOdometer: Unparsable digit format")
+      throw new Error("LightOdometer: Unparsable digit format")
     }
 
     const [ _, repeating, radix, fractional ] = parsed
@@ -259,8 +245,7 @@ class TmOdometer {
 
   /**
    * Renders the odometer with the specified value.
-   * Updates the DOM structure, applies the appropriate theme and classes,
-   * and formats the digits for display.
+   * Updates the DOM structure, applies the appropriate classes, and formats the digits for display.
    * @param {number} [value] - The value to render. Defaults to the current value (`this.value`).
    * @returns {void}
    */
@@ -271,21 +256,11 @@ class TmOdometer {
 
     this.inside.innerHTML = ""
 
-    let { theme } = this.options
-
     const classes = this.el.className.split(" ")
     const newClasses: string[] = []
 
     for (const cls of classes) {
       if (cls.length) {
-        const match = (/^odometer-theme-(.+)$/).exec(cls)
-
-        if (match) {
-          theme = match[1]
-
-          continue
-        }
-
         if ((/^odometer(-|$)/).test(cls)) {
           continue
         }
@@ -294,19 +269,7 @@ class TmOdometer {
       }
     }
 
-    newClasses.push("odometer")
-
-    if (!TRANSITION_SUPPORT) {
-      newClasses.push("odometer-no-transitions")
-    }
-
-    if (theme) {
-      newClasses.push(`odometer-theme-${theme}`)
-    } else {
-      // This class matches all themes, so it should do what you'd expect if only one
-      // theme css file is brought into the page.
-      newClasses.push("odometer-auto-theme")
-    }
+    newClasses.push("odometer", "odometer-auto-theme")
 
     this.el.className = newClasses.join(" ")
 
@@ -364,8 +327,7 @@ class TmOdometer {
    * @returns {string} The value as a string with the required precision.
    */
   preservePrecision(value: number): string {
-    // This function fixes the precision at the end of the animation keeping the
-    // decimal places even if we have 0 digits only
+    // This function fixes the precision at the end of the animation keeping the decimal places even if we have 0 digits only
     let fixedValue: string = value.toString()
 
     if (this.format.precision) {
@@ -388,8 +350,7 @@ class TmOdometer {
 
   /**
    * Updates the odometer to display a new value.
-   * Cleans and normalizes the input value, determines the difference from the current value,
-   * and triggers the appropriate animations and DOM updates.
+   * Cleans and normalizes the input value, determines the difference from the current value, and triggers the appropriate animations and DOM updates.
    * @param {string | number} newValue - The new value to update the odometer to.
    * @returns {number} The updated value of the odometer.
    */
@@ -420,7 +381,7 @@ class TmOdometer {
 
     setTimeout(() => {
       // Force a repaint
-      this.el.offsetHeight
+      void this.el.offsetHeight
       addClass(this.el, "odometer-animating")
     }, 0)
 
@@ -482,8 +443,7 @@ class TmOdometer {
 
   /**
    * Adds a digit or spacer element to the odometer's inner container.
-   * Handles special cases for negation (`-`) and radix (`.`) characters,
-   * and ensures the format's repeating pattern is respected.
+   * Handles special cases for negation (`-`) and radix (`.`) characters, and ensures the format's repeating pattern is respected.
    * @param {string} value - The digit or character to add.
    * @param {boolean} [repeating=true] - Whether to use the repeating format pattern. Defaults to `true`.
    * @returns {HTMLElement} The inserted digit or spacer element.
@@ -547,7 +507,7 @@ class TmOdometer {
    * @returns {void}
    */
   animate(newValue: number): void {
-    if (!TRANSITION_SUPPORT || this.options.animation === "count") {
+    if (this.options.animation === "count") {
       this.animateCount(newValue)
     } else {
       this.animateSlide(newValue)
@@ -593,11 +553,7 @@ class TmOdometer {
         this.render(Math.round(cur))
       }
 
-      if (requestAnimationFrame) {
-        requestAnimationFrame(tick)
-      } else {
-        setTimeout(tick, COUNT_MS_PER_FRAME)
-      }
+      requestAnimationFrame(tick)
     }
 
     tick()
@@ -625,9 +581,7 @@ class TmOdometer {
    * @returns {number} The maximum number of fractional digits.
    */
   getFractionalDigitCount(...values: number[]): number {
-    // This assumes the value has already been rounded to
-    // @format.precision places
-    //
+    // This assumes the value has already been rounded to @format.precision places
     const parser = /^-?\d*\.(\d*?)0*$/
 
     for (let i = 0; i < values.length; i++) {
@@ -644,8 +598,7 @@ class TmOdometer {
 
   /**
    * Resets the odometer's digits and ribbons.
-   * Clears the inner container, resets the format configuration,
-   * and prepares the odometer for re-rendering.
+   * Clears the inner container, resets the format configuration, and prepares the odometer for re-rendering.
    * @returns {void}
    */
   resetDigits(): void {
@@ -675,8 +628,7 @@ class TmOdometer {
 
   /**
    * Animates the odometer to transition to a new value using a sliding animation.
-   * Breaks the value into individual digits, calculates the frames for each digit's animation,
-   * and updates the DOM to reflect the sliding effect.
+   * Breaks the value into individual digits, calculates the frames for each digit's animation, and updates the DOM to reflect the sliding effect.
    * @param {number} newValue - The new value to animate the odometer to.
    * @returns {void}
    */
@@ -705,8 +657,7 @@ class TmOdometer {
     let boosted = 0
     let start = oldValue
 
-    // We create an array to represent the series of digits which should be
-    // animated in each column
+    // We create an array to represent the series of digits which should be animated in each column
     for (let i = 0; i < digitCount; i++) {
       // We need to get the digit at the current position
       start = truncate(oldValue / Math.pow(10, digitCount - i - 1))
@@ -721,9 +672,8 @@ class TmOdometer {
         frames = []
 
         // Subsequent digits need to be faster than previous ones
-        const incr
-          = dist
-            / (this.MAX_VALUES + this.MAX_VALUES * boosted * DIGIT_SPEEDBOOST)
+        const denominator = this.MAX_VALUES * (1 + (boosted * DIGIT_SPEEDBOOST))
+        const incr = dist / denominator
         let cur = start
 
         while ((dist > 0 && cur < end) || (dist < 0 && cur > end)) {
@@ -760,7 +710,11 @@ class TmOdometer {
       }
 
       if (this.ribbons[i] === undefined) {
-        this.ribbons[i] = this.digits[i].querySelector(".odometer-ribbon-inner") as HTMLElement
+        const ribbon = this.digits[i].querySelector<HTMLElement>(".odometer-ribbon-inner")
+
+        if (ribbon) {
+          this.ribbons[i] = ribbon
+        }
       }
 
       this.ribbons[i].innerHTML = ""
@@ -809,21 +763,15 @@ class TmOdometer {
 
   /**
    * Initializes all odometer elements on the page.
-   * Selects elements matching the configured selector or the default `.odometer` class,
-   * and creates a `TmOdometer` instance for each element.
-   * @returns {TmOdometer[]} An array of initialized `TmOdometer` instances.
+   * Selects elements matching the configured selector or the default `.odometer` class, and creates a `LightOdometer` instance for each element.
+   * @returns {LightOdometer[]} An array of initialized `LightOdometer` instances.
    */
-  static init(): TmOdometer[] {
-    if (!document.querySelectorAll) {
-      // IE 7 or 8 in Quirksmode
-      return []
-    }
-
-    const elements = document.querySelectorAll(TmOdometer.options.selector || ".odometer") as NodeListOf<HTMLElement>
+  static init(): LightOdometer[] {
+    const elements = document.querySelectorAll<HTMLElement>(LightOdometer.options.selector || ".odometer")
 
     return Array.from(
       elements,
-      (el) => (el.odometer = new TmOdometer({
+      (el) => (el.odometer = new LightOdometer({
         el,
         value: el.innerText ?? el.textContent,
       })),
@@ -831,10 +779,10 @@ class TmOdometer {
   }
 }
 
-// Initialize TmOdometer global options with a deferred execution
-initGlobalOptionsDeferred(TmOdometer)
+// Initialize LightOdometer global options with a deferred execution
+initGlobalOptionsDeferred(LightOdometer)
 
-// Initialize all existing TmOdometer instances on the page when the DOM is fully loaded
-initExistingOdometers(TmOdometer)
+// Initialize all existing LightOdometer instances on the page when the DOM is fully loaded
+initExistingOdometers(LightOdometer)
 
-export { TmOdometer }
+export { LightOdometer }
