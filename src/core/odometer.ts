@@ -843,6 +843,93 @@ class LightOdometer {
   }
 
   /**
+   * Mutate this instance's options on-the-fly.
+   * Recomputes timing fields and applies changes immediately.
+   * If a new value is provided, it triggers update() with the new configuration.
+   */
+  setOptions(newOptions: Partial<LightOdometerOptions>): void {
+    if (!newOptions || typeof newOptions !== "object") {
+      return
+    }
+
+    // Ignore attempts to swap the bound element at runtime
+    if ("el" in newOptions) {
+      delete (newOptions as Partial<LightOdometerOptions> & { el?: HTMLElement }).el
+    }
+
+    const hasValueChange = Object.prototype.hasOwnProperty.call(newOptions, "value")
+    const hadFormatChange = Object.prototype.hasOwnProperty.call(newOptions, "format")
+      || Object.prototype.hasOwnProperty.call(newOptions, "formatFunction")
+    const hadTimingChange = Object.prototype.hasOwnProperty.call(newOptions, "duration")
+      || Object.prototype.hasOwnProperty.call(newOptions, "framerate")
+      || Object.prototype.hasOwnProperty.call(newOptions, "countFramerate")
+
+    // Merge and recompute derived timing
+    this.options = {
+      ...this.options, ...newOptions,
+    }
+    this.options.duration ??= DURATION
+
+    const frameRate = this.options.framerate ?? FRAMERATE
+    const countFrameRate = this.options.countFramerate ?? COUNT_FRAMERATE
+
+    this._msPerFrame = 1000 / frameRate
+    this._countMsPerFrame = 1000 / countFrameRate
+    this.MAX_VALUES = (this.options.duration / this._msPerFrame / FRAMES_PER_VALUE) | 0
+
+    // Update CSS custom property for duration
+    if (isBrowser()) {
+      this.el.style.setProperty("--odometer-duration", `${this.options.duration}ms`)
+    }
+
+    // Apply format changes
+    if (hadFormatChange) {
+      this.resetFormat()
+    }
+
+    // If a value change was requested, animate/update to that value using the new config
+    if (hasValueChange) {
+      this.update(this.options.value ?? 0)
+
+      return
+    }
+
+    // Otherwise, re-render to apply format/timing-related structural changes
+    if (hadFormatChange || hadTimingChange) {
+      if (isBrowser()) {
+        this.stopWatchingMutations()
+        this.render()
+        this.startWatchingMutations()
+      }
+    }
+  }
+
+  /**
+   * Update global default options at runtime. Does not retroactively affect existing instances.
+   */
+  static setGlobalOptions(newOptions: Partial<LightOdometerGlobalOptions>): void {
+    LightOdometer.options = {
+      ...LightOdometer.options,
+      ...newOptions,
+    }
+  }
+
+  /**
+   * Get a shallow copy snapshot of this instance's current options.
+   * Mutating the returned object will not affect the instance.
+   */
+  getOptions(): Readonly<LightOdometerOptions> {
+    return { ...this.options }
+  }
+
+  /**
+   * Get a shallow copy snapshot of global default options.
+   */
+  static getGlobalOptions(): Readonly<LightOdometerGlobalOptions> {
+    return { ...LightOdometer.options }
+  }
+
+  /**
    * Animate to a value exactly once and then disconnect listeners/observers.
    * Useful for static numbers that only animate on first reveal.
    */
