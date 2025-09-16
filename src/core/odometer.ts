@@ -357,6 +357,7 @@ class LightOdometer {
           const digit = this.renderDigit()
 
           const valEl = digit.querySelector<HTMLElement>(".odometer-value")!
+
           valEl.textContent = valueDigit
           // In static (non-animated) render, mark as both first and last for CSS hooks
           addClass(valEl, "odometer-first-value odometer-last-value")
@@ -572,11 +573,11 @@ class LightOdometer {
 
     const digit = this.renderDigit()
 
-  const valEl = digit.querySelector<HTMLElement>(".odometer-value")!
+    const valEl = digit.querySelector<HTMLElement>(".odometer-value")!
 
     valEl.textContent = value
   // In static (non-animated) state, ensure value element has both markers
-  addClass(valEl, "odometer-first-value odometer-last-value")
+    addClass(valEl, "odometer-first-value odometer-last-value")
     this.digits.push(digit)
 
     return this.insertDigit(digit)
@@ -1023,10 +1024,13 @@ class LightOdometer {
    * @returns {string} A JSON-parseable string representation of the current odometer state.
    */
   toString(): string {
+    const {
+      el, ...options
+    } = { ...this.getOptions() }
     const snapshot = {
       id: this.options.id,
       value: this.value,
-      options: this.getOptions(),
+      options,
       globalOptions: LightOdometer.getGlobalOptions(),
       watchMutations: this.watchMutations,
       transitionEndBound: this.transitionEndBound,
