@@ -356,7 +356,10 @@ class LightOdometer {
         if ((/\d/).test(valueDigit)) {
           const digit = this.renderDigit()
 
-          digit.querySelector(".odometer-value")!.textContent = valueDigit
+          const valEl = digit.querySelector<HTMLElement>(".odometer-value")!
+          valEl.textContent = valueDigit
+          // In static (non-animated) render, mark as both first and last for CSS hooks
+          addClass(valEl, "odometer-first-value odometer-last-value")
           this.digits.push(digit)
           this.insertDigit(digit)
         } else {
@@ -569,9 +572,11 @@ class LightOdometer {
 
     const digit = this.renderDigit()
 
-    const valEl = digit.querySelector(".odometer-value")!
+  const valEl = digit.querySelector<HTMLElement>(".odometer-value")!
 
     valEl.textContent = value
+  // In static (non-animated) state, ensure value element has both markers
+  addClass(valEl, "odometer-first-value odometer-last-value")
     this.digits.push(digit)
 
     return this.insertDigit(digit)
@@ -1011,6 +1016,34 @@ class LightOdometer {
 
     this.transitionEndBound = false
     this.destroyed = true
+  }
+
+  /**
+   * Returns the entire current odometer object along with the global options.
+   * @returns {string} A string representation of the current odometer state.
+   */
+  toString(): string {
+    // Avoid serializing the HTMLElement directly (circular / large). Use an HTML snapshot instead.
+    const elSnapshot = (this.el && typeof (this.el).outerHTML === "string")
+      ? (this.el).outerHTML
+      : (() => {
+        try {
+          return JSON.stringify(this.el)
+        } catch {
+          // oxlint-disable-next-line no-base-to-string
+          return String(this.el)
+        }
+      })()
+
+    const snapshot = {
+      el: elSnapshot,
+      id: this.options.id,
+      value: this.value,
+      options: this.getOptions(),
+      globalOptions: LightOdometer.getGlobalOptions(),
+    }
+
+    return JSON.stringify(snapshot)
   }
 }
 
