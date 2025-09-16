@@ -2,6 +2,7 @@ import type {
   FormatObject,
   LightOdometerOptions,
   LightOdometerGlobalOptions,
+  LightOdometerEventName,
 } from "../shared/interfaces"
 
 import {
@@ -38,6 +39,7 @@ class LightOdometer {
     ? (window.odometerOptions ?? {})
     : {})
 
+  private _isAnimating: boolean = false
   options: LightOdometerOptions
   el: HTMLElement
   value: number = 0
@@ -48,6 +50,11 @@ class LightOdometer {
   destroyed: boolean = false
   format: FormatObject = {
     repeating: "", precision: 0,
+  }
+
+  /** Readonly flag indicating whether this instance is currently animating */
+  get isAnimating(): Readonly<boolean> {
+    return this._isAnimating
   }
 
   MAX_VALUES!: number
@@ -254,7 +261,14 @@ class LightOdometer {
       setTimeout(() => {
         this.render()
         renderEnqueued = false
-        trigger(this.el, "odometerdone")
+        this._isAnimating = false
+        trigger(this.el, "odometerdone", {
+          id: this.options.id,
+          el: this.el,
+          instance: this,
+          value: this.value,
+          options: this.getOptions(),
+        })
       }, 0)
 
       return true
@@ -425,6 +439,17 @@ class LightOdometer {
       addClass(this.el, "odometer-animating-down")
     }
 
+    // mark animating and dispatch start event
+    this._isAnimating = true
+    trigger(this.el, "odometerstart", {
+      id: this.options.id,
+      el: this.el,
+      instance: this,
+      value: newValue,
+      oldValue: this.value,
+      options: this.getOptions(),
+    })
+
     this.stopWatchingMutations()
     this.animate(newValue)
     this.startWatchingMutations()
@@ -592,7 +617,14 @@ class LightOdometer {
       if (now() - start > (this.options.duration || 0)) {
         this.value = newValue
         this.render()
-        trigger(this.el, "odometerdone")
+        this._isAnimating = false
+        trigger(this.el, "odometerdone", {
+          id: this.options.id,
+          el: this.el,
+          instance: this,
+          value: this.value,
+          options: this.getOptions(),
+        })
 
         return
       }
@@ -912,6 +944,16 @@ class LightOdometer {
       ...LightOdometer.options,
       ...newOptions,
     }
+  }
+
+  /** Subscribe to odometer events ("odometerstart" | "odometerdone") for this instance */
+  on(event: LightOdometerEventName, handler: EventListener): void {
+    this.el.addEventListener(event, handler)
+  }
+
+  /** Unsubscribe from odometer events for this instance */
+  off(event: LightOdometerEventName, handler: EventListener): void {
+    this.el.removeEventListener(event, handler)
   }
 
   /**

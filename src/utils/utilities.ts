@@ -1,4 +1,5 @@
 import type LightOdometer from "../core/odometer"
+import type { LightOdometerEventDetail } from "../shared/interfaces"
 
 /**
  * Creates an HTML element from the given HTML string.
@@ -60,9 +61,9 @@ function addClass(el: HTMLElement, name: string): string {
  * @param {HTMLElement} el - The element on which to dispatch the event.
  * @param {string} name - The name of the event to trigger.
  */
-function trigger(el: HTMLElement, name: string): void {
+function trigger(el: HTMLElement, name: string, detail?: LightOdometerEventDetail): void {
   const evt = new CustomEvent(name, {
-    bubbles: true, cancelable: true,
+    bubbles: true, cancelable: true, detail,
   })
 
   el.dispatchEvent(evt)

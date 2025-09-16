@@ -23,6 +23,9 @@ export interface LightOdometerGlobalOptions {
  */
 export interface LightOdometerOptions {
   el: HTMLElement;
+
+  /** Optional identifier for this instance; propagated in event details */
+  id?: string | number;
   value?: string | number | null;
   format?: string;
   duration?: number;
@@ -30,6 +33,23 @@ export interface LightOdometerOptions {
   countFramerate?: number;
   animation?: "count" | "slide";
   formatFunction?: (value: number)=> string;
+}
+
+export type LightOdometerEventName = "odometerstart" | "odometerdone"
+
+export interface LightOdometerEventDetail {
+  id?: string | number;
+  el: HTMLElement;
+  instance: LightOdometer;
+
+  /** New value driving the animation */
+  value: number;
+
+  /** Previous value before the animation (if available) */
+  oldValue?: number;
+
+  /** Snapshot of instance options at the time of the event */
+  options: LightOdometerOptions;
 }
 
 /**
