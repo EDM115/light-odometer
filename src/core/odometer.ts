@@ -1,6 +1,7 @@
 import type {
   FormatObject,
   LightOdometerOptions,
+  LightOdometerGlobalOptions,
 } from "../shared/interfaces"
 
 import {
@@ -30,7 +31,7 @@ import {
 } from "../utils/utilities"
 
 class LightOdometer {
-  static options: Omit<LightOdometerOptions, "el"> = window.odometerOptions ?? {}
+  static options: LightOdometerGlobalOptions = window.odometerOptions ?? {}
 
   options: LightOdometerOptions
   el: HTMLElement
@@ -66,10 +67,6 @@ class LightOdometer {
     this.options = {
       ...LightOdometer.options,
       ...this.options,
-    }
-
-    if (this.options.value == null && LightOdometer.options.value != null) {
-      this.options.value = LightOdometer.options.value
     }
 
     this.options.duration ??= DURATION

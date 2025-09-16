@@ -5,7 +5,7 @@ import type { LightOdometer } from "../core/odometer"
  * @property {string} [selector] - The selector for the odometer elements.
  * @property {boolean} [auto] - Whether to automatically initialize odometers.
  */
-export interface LightOdometerOptions {
+export interface LightOdometerGlobalOptions {
   selector?: string;
   auto?: boolean;
 }
@@ -41,7 +41,7 @@ export interface FormatObject {
 }
 
 declare global {
-  interface Window extends WindowOrWorkerGlobalScope { odometerOptions?: Omit<LightOdometerOptions, "el"> }
+  interface Window extends WindowOrWorkerGlobalScope { odometerOptions?: LightOdometerGlobalOptions }
 
   interface HTMLElement { odometer?: LightOdometer }
 }
