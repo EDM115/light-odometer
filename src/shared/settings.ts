@@ -2,7 +2,7 @@
 
 The bit within the parenthesis will be repeated, so (,ddd) becomes 123,456,789....
 
-If your locale uses spaces to separate digits, you could consider using a Narrow No-Break Space ( ), as it's a bit more correct.
+If your locale uses spaces to separate digits, you could consider using a Narrow No-Break Space ( ), as it's a bit more correct.
 
 Numbers will be rounded to the number of digits after the radix separator.
 
@@ -37,6 +37,8 @@ export {
   DIGIT_FORMAT,
   FORMAT_PARSER,
   DURATION,
+  FRAMERATE,
+  COUNT_FRAMERATE,
   FRAMES_PER_VALUE,
   DIGIT_SPEEDBOOST,
   MS_PER_FRAME,

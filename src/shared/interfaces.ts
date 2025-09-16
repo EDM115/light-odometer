@@ -1,4 +1,4 @@
-import type { LightOdometer } from "../core/odometer"
+import type LightOdometer from "../core/odometer"
 
 /**
  * LightOdometer global options interface
@@ -16,6 +16,8 @@ export interface LightOdometerGlobalOptions {
  * @property {string | number | null} [value] - The initial value of the odometer.
  * @property {string} [format] - The format string for the odometer.
  * @property {number} [duration] - The duration of the animation in milliseconds.
+ * @property {number} [framerate] - Target framerate for slide animation.
+ * @property {number} [countFramerate] - Target framerate for count animation.
  * @property {'count' | 'slide'} [animation] - The animation type ('count' or 'slide').
  * @property {(value: number) => string} [formatFunction] - A custom format function.
  */
@@ -24,6 +26,8 @@ export interface LightOdometerOptions {
   value?: string | number | null;
   format?: string;
   duration?: number;
+  framerate?: number;
+  countFramerate?: number;
   animation?: "count" | "slide";
   formatFunction?: (value: number)=> string;
 }

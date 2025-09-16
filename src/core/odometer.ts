@@ -14,8 +14,8 @@ import {
   DURATION,
   FRAMES_PER_VALUE,
   DIGIT_SPEEDBOOST,
-  MS_PER_FRAME,
-  COUNT_MS_PER_FRAME,
+  FRAMERATE,
+  COUNT_FRAMERATE,
 } from "../shared/settings"
 
 import {
@@ -28,10 +28,15 @@ import {
   truncate,
   initGlobalOptionsDeferred,
   initExistingOdometers,
+  isBrowser,
+  safeRaf,
+  safeCancelRaf,
 } from "../utils/utilities"
 
 class LightOdometer {
-  static options: LightOdometerGlobalOptions = window.odometerOptions ?? {}
+  static options: LightOdometerGlobalOptions = (typeof window !== "undefined"
+    ? (window.odometerOptions ?? {})
+    : {})
 
   options: LightOdometerOptions
   el: HTMLElement
@@ -40,6 +45,7 @@ class LightOdometer {
   observer?: MutationObserver
   watchMutations: boolean = false
   transitionEndBound: boolean = false
+  destroyed: boolean = false
   format: FormatObject = {
     repeating: "", precision: 0,
   }
@@ -47,6 +53,11 @@ class LightOdometer {
   MAX_VALUES!: number
   digits: HTMLElement[] = []
   ribbons: Record<number, HTMLElement> = {}
+  private _rafId?: number | NodeJS.Timeout
+  private _countRafId?: number | NodeJS.Timeout
+  private _msPerFrame!: number
+  private _countMsPerFrame!: number
+  private _onTransitionEnd?: (ev: TransitionEvent)=> void
 
   /**
    * Initializes a new instance of the LightOdometer class.
@@ -58,8 +69,35 @@ class LightOdometer {
     this.options = options
     this.el = this.options.el
 
+    // If an instance already exists on this element, reconfigure it with the new options
     if (this.el.odometer) {
-      return this.el.odometer
+      const inst = this.el.odometer
+
+      // Merge options (new options override existing)
+      inst.options = {
+        ...inst.options,
+        ...this.options,
+      }
+
+      // Ensure derived timing fields are recomputed
+      inst.options.duration ??= DURATION
+      const frameRate = inst.options.framerate ?? FRAMERATE
+      const countFrameRate = inst.options.countFramerate ?? COUNT_FRAMERATE
+
+      inst._msPerFrame = 1000 / frameRate
+      inst._countMsPerFrame = 1000 / countFrameRate
+      inst.MAX_VALUES = (inst.options.duration / inst._msPerFrame / FRAMES_PER_VALUE) | 0
+
+      // Refresh format and re-render or update to apply changes
+      inst.resetFormat()
+
+      if (this.options.value != null) {
+        inst.update(this.options.value)
+      } else if (isBrowser()) {
+        inst.render()
+      }
+
+      return inst
     }
 
     this.el.odometer = this
@@ -70,38 +108,47 @@ class LightOdometer {
     }
 
     this.options.duration ??= DURATION
-    this.MAX_VALUES = (this.options.duration / MS_PER_FRAME / FRAMES_PER_VALUE) | 0
+  // Allow per-instance framerate customization
+    const frameRate = this.options.framerate ?? FRAMERATE
+    const countFrameRate = this.options.countFramerate ?? COUNT_FRAMERATE
+
+    this._msPerFrame = 1000 / frameRate
+    this._countMsPerFrame = 1000 / countFrameRate
+    this.MAX_VALUES = (this.options.duration / this._msPerFrame / FRAMES_PER_VALUE) | 0
 
     this.resetFormat()
 
     this.value = this.cleanValue(this.options.value ?? "")
 
-    this.renderInside()
-    this.render()
+    // SSR-guard: if not in browser, just no-op render
+    if (isBrowser()) {
+      this.renderInside()
+      this.render()
+    }
 
     try {
       const WRAPPED_PROPS = [ "innerHTML", "innerText", "textContent" ] as const
 
       for (const property of WRAPPED_PROPS) {
-        if (this.el[property]) {
-          Object.defineProperty(this.el, property, {
-            "get": (): string => {
-              if (property === "innerHTML") {
-                return this.inside.outerHTML
-              } else {
-                // It's just a single HTML element, so innerText is the same as outerText.
-                return this.inside.innerText ?? this.inside.textContent ?? ""
-              }
-            },
-            "set": (val: string) => {
-              return this.update(val)
-            },
-          })
-        }
+        Object.defineProperty(this.el, property, {
+          "get": (): string => {
+            if (property === "innerHTML") {
+              return this.inside?.outerHTML ?? ""
+            } else {
+              // It's just a single HTML element, so innerText is the same as outerText.
+              return this.inside?.innerText ?? this.inside?.textContent ?? ""
+            }
+          },
+          "set": (val: string) => {
+            return this.update(val)
+          },
+        })
       }
     } catch (_e) {
       // Safari
-      this.watchForMutations()
+      if (isBrowser()) {
+        this.watchForMutations()
+      }
     }
   }
 
@@ -111,9 +158,13 @@ class LightOdometer {
    * @returns {void}
    */
   renderInside(): void {
+    if (!isBrowser()) {
+      return
+    }
+
     this.inside = document.createElement("div")
     this.inside.className = "odometer-inside"
-    this.el.innerHTML = ""
+    this.el.textContent = ""
     this.el.appendChild(this.inside)
   }
 
@@ -146,7 +197,7 @@ class LightOdometer {
    * @returns {void}
    */
   startWatchingMutations(): void {
-    if (this.watchMutations) {
+    if (this.watchMutations && isBrowser()) {
       this.observer?.observe(this.el, { childList: true })
     }
   }
@@ -170,7 +221,7 @@ class LightOdometer {
     if (typeof val === "string") {
       // We need to normalize the format so we can properly turn it into a float.
       val = val.replace(this.format.radix ?? ".", "<radix>")
-      val = val.replace(/[.,]/g, "")
+      val = val.replace(/[.,\s\u00A0\u202F]/g, "")
       val = val.replace("<radix>", ".")
       val = parseFloat(val) || 0
     }
@@ -193,25 +244,23 @@ class LightOdometer {
     // The event will be triggered once for each ribbon, we only want one render though
     let renderEnqueued = false
 
-    this.el.addEventListener(
-      "transitionend",
-      () => {
-        if (renderEnqueued) {
-          return true
-        }
-
-        renderEnqueued = true
-
-        setTimeout(() => {
-          this.render()
-          renderEnqueued = false
-          trigger(this.el, "odometerdone")
-        }, 0)
-
+    this._onTransitionEnd = () => {
+      if (renderEnqueued) {
         return true
-      },
-      false,
-    )
+      }
+
+      renderEnqueued = true
+
+      setTimeout(() => {
+        this.render()
+        renderEnqueued = false
+        trigger(this.el, "odometerdone")
+      }, 0)
+
+      return true
+    }
+
+    this.el.addEventListener("transitionend", this._onTransitionEnd, false)
   }
 
   /**
@@ -247,28 +296,26 @@ class LightOdometer {
    * @returns {void}
    */
   render(value?: number): void {
+    if (!isBrowser()) {
+      return
+    }
+
     value ??= this.value
     this.stopWatchingMutations()
     this.resetFormat()
 
-    this.inside.innerHTML = ""
+    this.inside.textContent = ""
 
-    const classes = this.el.className.split(" ")
-    const newClasses: string[] = []
-
-    for (const cls of classes) {
-      if (cls.length) {
-        if ((/^odometer(-|$)/).test(cls)) {
-          continue
-        }
-
-        newClasses.push(cls)
+    // Strip previous odometer classes only
+    for (const cls of Array.from(this.el.classList)) {
+      if ((/^odometer(-|$)/).test(cls)) {
+        this.el.classList.remove(cls)
       }
     }
 
-    newClasses.push("odometer", "odometer-auto-theme")
-
-    this.el.className = newClasses.join(" ")
+    this.el.classList.add("odometer", "odometer-auto-theme")
+    // Expose duration to CSS via custom property for consistent JS/CSS timing
+    this.el.style.setProperty("--odometer-duration", `${this.options.duration ?? DURATION}ms`)
 
     this.ribbons = {}
 
@@ -292,10 +339,10 @@ class LightOdometer {
 
       for (const valueDigit of valueString.split("")
         .toReversed()) {
-        if (valueDigit.match(/0-9/)) {
+        if ((/\d/).test(valueDigit)) {
           const digit = this.renderDigit()
 
-          digit.querySelector(".odometer-value")!.innerHTML = valueDigit
+          digit.querySelector(".odometer-value")!.textContent = valueDigit
           this.digits.push(digit)
           this.insertDigit(digit)
         } else {
@@ -352,6 +399,12 @@ class LightOdometer {
    * @returns {number} The updated value of the odometer.
    */
   update(newValue: string | number): number {
+    if (!isBrowser()) {
+      this.value = this.cleanValue(newValue)
+
+      return this.value
+    }
+
     newValue = this.cleanValue(newValue)
 
     // If the value is the same, we don't need to do anything
@@ -377,7 +430,7 @@ class LightOdometer {
     this.startWatchingMutations()
 
     setTimeout(() => {
-      // Force a repaint
+      // Force a repaint using a tiny read, batched
       void this.el.offsetHeight
       addClass(this.el, "odometer-animating")
     }, 0)
@@ -429,7 +482,7 @@ class LightOdometer {
   ): HTMLElement {
     const spacer = createFromHTML(FORMAT_MARK_HTML)
 
-    spacer.innerHTML = chr
+    spacer.textContent = chr
 
     if (extraClasses) {
       addClass(spacer, extraClasses)
@@ -491,7 +544,9 @@ class LightOdometer {
 
     const digit = this.renderDigit()
 
-    digit.querySelector(".odometer-value")!.innerHTML = value
+    const valEl = digit.querySelector(".odometer-value")!
+
+    valEl.textContent = value
     this.digits.push(digit)
 
     return this.insertDigit(digit)
@@ -518,6 +573,10 @@ class LightOdometer {
    * @returns {void}
    */
   animateCount(newValue: number): void {
+    if (!isBrowser()) {
+      return
+    }
+
     // If the value is the same, we don't need to do anything
     const diff = newValue - this.value
 
@@ -529,7 +588,7 @@ class LightOdometer {
     let last = start
 
     let cur = this.value
-    let tick = () => {
+    const tick = () => {
       if (now() - start > (this.options.duration || 0)) {
         this.value = newValue
         this.render()
@@ -540,7 +599,7 @@ class LightOdometer {
 
       const delta = now() - last
 
-      if (delta > COUNT_MS_PER_FRAME) {
+      if (delta > this._countMsPerFrame) {
         last = now()
 
         const fraction = delta / (this.options.duration || 0)
@@ -550,10 +609,10 @@ class LightOdometer {
         this.render(Math.round(cur))
       }
 
-      requestAnimationFrame(tick)
+      this._countRafId = safeRaf(tick)
     }
 
-    tick()
+    this._countRafId = safeRaf(tick)
   }
 
   /**
@@ -601,7 +660,7 @@ class LightOdometer {
   resetDigits(): void {
     this.digits = []
     this.ribbons = {}
-    this.inside.innerHTML = ""
+    this.inside.textContent = ""
     this.resetFormat()
   }
 
@@ -630,6 +689,10 @@ class LightOdometer {
    * @returns {void}
    */
   animateSlide(newValue: number): void {
+    if (!isBrowser()) {
+      return
+    }
+
     let oldValue = this.value
 
     // Fix to animate always the fixed decimal digits passed in input
@@ -714,7 +777,7 @@ class LightOdometer {
         }
       }
 
-      this.ribbons[i].innerHTML = ""
+      this.ribbons[i].textContent = ""
 
       if (diff < 0) {
         frames = frames.toReversed()
@@ -725,7 +788,7 @@ class LightOdometer {
         const numEl = document.createElement("div")
 
         numEl.className = "odometer-value"
-        numEl.innerHTML = frame.toString()
+        numEl.textContent = frame.toString()
 
         this.ribbons[i].appendChild(numEl)
 
@@ -764,6 +827,10 @@ class LightOdometer {
    * @returns {LightOdometer[]} An array of initialized `LightOdometer` instances.
    */
   static init(): LightOdometer[] {
+    if (!isBrowser()) {
+      return []
+    }
+
     const elements = document.querySelectorAll<HTMLElement>(LightOdometer.options.selector || ".odometer")
 
     return Array.from(
@@ -774,6 +841,48 @@ class LightOdometer {
       })),
     )
   }
+
+  /**
+   * Animate to a value exactly once and then disconnect listeners/observers.
+   * Useful for static numbers that only animate on first reveal.
+   */
+  animateOnceAndDisconnect(toValue?: number | string): void {
+    if (toValue != null) {
+      this.update(toValue)
+    }
+
+    // After current transition end or in next frame, disconnect
+    const finish = () => this.disconnect()
+    const once = (_e: Event) => {
+      this.el.removeEventListener("odometerdone", once)
+      finish()
+    }
+
+    this.el.addEventListener("odometerdone", once, { once: true })
+    // Fallback in case transitionend/odometerdone doesn't fire
+    setTimeout(finish, (this.options.duration ?? DURATION) + 100)
+  }
+
+  /**
+   * Disconnect all observers and cancel animation frames. Remove transition listener flag.
+   */
+  disconnect(): void {
+    if (this.destroyed) {
+      return
+    }
+
+    this.stopWatchingMutations()
+    safeCancelRaf(this._rafId)
+    safeCancelRaf(this._countRafId)
+
+    if (this._onTransitionEnd) {
+      this.el.removeEventListener("transitionend", this._onTransitionEnd)
+      this._onTransitionEnd = undefined
+    }
+
+    this.transitionEndBound = false
+    this.destroyed = true
+  }
 }
 
 // Initialize LightOdometer global options with a deferred execution
@@ -782,4 +891,4 @@ initGlobalOptionsDeferred(LightOdometer)
 // Initialize all existing LightOdometer instances on the page when the DOM is fully loaded
 initExistingOdometers(LightOdometer)
 
-export { LightOdometer }
+export default LightOdometer

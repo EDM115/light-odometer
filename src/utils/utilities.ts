@@ -1,4 +1,4 @@
-import type { LightOdometer } from "../core/odometer"
+import type LightOdometer from "../core/odometer"
 
 /**
  * Creates an HTML element from the given HTML string.
@@ -27,11 +27,11 @@ function createFromHTML(html: string): HTMLElement {
  * @returns {string} The updated `className` string of the element (may contain leading/trailing spaces).
  */
 function removeClass(el: HTMLElement, name: string): string {
-  el.className = el.className.replace(
-    new RegExp(`(^| )${name.split(" ")
-      .join("|")}( |$)`, "gi"),
-    " ",
-  )
+  const names = name.split(" ")
+
+  for (const n of names) {
+    el.classList.remove(n)
+  }
 
   return el.className
 }
@@ -44,9 +44,15 @@ function removeClass(el: HTMLElement, name: string): string {
  * @returns {string} The updated `className` string of the element (may contain leading/trailing spaces).
  */
 function addClass(el: HTMLElement, name: string): string {
-  removeClass(el, name)
+  const names = name.split(" ")
 
-  return (el.className += ` ${name}`)
+  for (const n of names) {
+    if (n) {
+      el.classList.add(n)
+    }
+  }
+
+  return el.className
 }
 
 /**
@@ -69,9 +75,11 @@ function trigger(el: HTMLElement, name: string): void {
  * @returns {number} The current timestamp in milliseconds.
  */
 function now(): number {
-  const left = window.performance?.now?.()
+  if (typeof performance !== "undefined" && typeof performance.now === "function") {
+    return performance.now()
+  }
 
-  return left ?? +new Date()
+  return Date.now()
 }
 
 /**
@@ -121,6 +129,48 @@ function fractionalPart(val: number): number {
   return val - round(val)
 }
 
+/** SSR guard */
+function isBrowser(): boolean {
+  return typeof window !== "undefined" && typeof document !== "undefined"
+}
+
+/** Safe requestAnimationFrame fallback */
+function safeRaf(cb: FrameRequestCallback): number | NodeJS.Timeout {
+  if (isBrowser() && typeof requestAnimationFrame === "function") {
+    return requestAnimationFrame(cb)
+  }
+
+  // 60fps-ish fallback in non-browser
+  return setTimeout(() => cb(now()), 16)
+}
+
+/** Safe cancel for requestAnimationFrame fallback */
+function safeCancelRaf(id: number | NodeJS.Timeout | null | undefined): void {
+  if (id == null) {
+    return
+  }
+
+  if (isBrowser() && typeof cancelAnimationFrame === "function" && typeof id === "number") {
+    cancelAnimationFrame(id)
+  } else {
+    clearTimeout(id)
+  }
+}
+
+/** Document ready helper */
+function onDocumentReady(cb: ()=> void): void {
+  if (!isBrowser()) {
+    return
+  }
+
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    // Queue to end of task to mimic DOMContentLoaded order
+    setTimeout(cb, 0)
+  } else {
+    document.addEventListener("DOMContentLoaded", cb, { once: true })
+  }
+}
+
 /**
  * Initializes global options for the provided `LightOdometer` class with a deferred execution.
  * Sets the static `options` object of the `LightOdometer` class based on `window.odometerOptions`.
@@ -130,6 +180,10 @@ function fractionalPart(val: number): number {
  * @returns {void}
  */
 function initGlobalOptionsDeferred(LightOdometerClass: typeof LightOdometer): void {
+  if (!isBrowser()) {
+    return
+  }
+
   setTimeout(() => {
     // We do this in a separate pass to allow people to set
     // window.odometerOptions after bringing the file in.
@@ -149,15 +203,11 @@ function initGlobalOptionsDeferred(LightOdometerClass: typeof LightOdometer): vo
  * @returns {void}
  */
 function initExistingOdometers(LightOdometerClass: typeof LightOdometer): void {
-  document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-      if (LightOdometerClass.options.auto !== false) {
-        LightOdometerClass.init()
-      }
-    },
-    false,
-  )
+  onDocumentReady(() => {
+    if (LightOdometerClass.options.auto !== false) {
+      LightOdometerClass.init()
+    }
+  })
 }
 
 export {
@@ -169,6 +219,10 @@ export {
   round,
   truncate,
   fractionalPart,
+  isBrowser,
+  safeRaf,
+  safeCancelRaf,
+  onDocumentReady,
   initGlobalOptionsDeferred,
   initExistingOdometers,
 }
