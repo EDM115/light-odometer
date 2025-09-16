@@ -1,55 +1,74 @@
 {
-  "name": "tm-odometer-lib",
-  "description": "TmOdometer: Lightweight JavaScript library for animated numeric counters with smooth transitions and precise decimal handling.",
-  "author": "Marco Trinastich <mt.marco87@gmail.com>",
+  "author": "EDM115 <npmjs@edm115.dev> (https://edm115.dev)",
+  "bugs": {
+    "email": "npmjs@edm115.dev",
+    "url": "https://github.com/EDM115/light-odometer/issues"
+  },
   "contributors": [
     "Adam Schwartz <adam.flynn.schwartz@gmail.com>",
+    "Marco Trinastich <mt.marco87@gmail.com>",
     "Zack Bloom <zackbloom@gmail.com>"
   ],
+  "description": "for personal use only, see EDM115/website",
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "~5.3.1",
+    "@types/node": "latest",
+    "@typescript-eslint/parser": "~8.44.0",
+    "eslint": "~9.35.0",
+    "oxlint": "~1.15.0",
+    "oxlint-tsgolint": "~0.2.0",
+    "tsdown": "~0.15.1",
+    "typescript": "~5.9.2",
+    "unplugin-unused": "~0.5.3"
+  },
+  "files": [
+    "dist"
+  ],
+  "funding": [
+    {
+      "type": "paypal",
+      "url": "https://www.paypal.me/8EDM115"
+    },
+    {
+      "type": "buymeacoffee",
+      "url": "https://www.buymeacoffee.com/edm115"
+    },
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/EDM115"
+    },
+    {
+      "type": "telegram",
+      "url": "https://t.me/EDM115bots/698"
+    }
+  ],
+  "homepage": "https://github.com/EDM115/light-odometer#readme",
   "license": "MIT",
-  "version": "2.0.0",
+  "name": "light-odometer",
+  "packageManager": "pnpm@10.16.1",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mtmarco87/tm-odometer.git"
+    "url": "git+https://github.com/EDM115/light-odometer.git"
   },
-  "bugs": {
-    "url": "https://github.com/mtmarco87/tm-odometer/issues"
-  },
-  "homepage": "https://github.com/mtmarco87/tm-odometer#readme",
-  "private": true,
   "scripts": {
-    "build": "npm run build:library && npm run build:legacy && npm run build:themes",
-    "build:library": "rollup -c",
-    "build:legacy": "grunt coffee && grunt terser:coffee",
-    "build:themes": "grunt compass",
-    "dev": "npm-run-all --parallel dev:library dev:legacy",
-    "dev:library": "rollup -c -w",
-    "dev:legacy": "grunt watch",
-    "link": "node scripts/npm-utils.js link",
-    "pack": "node scripts/npm-utils.js pack",
-    "publish": "node scripts/npm-utils.js publish",
-    "clean": "rimraf dist"
+    "build": "tsdown",
+    "lint": "oxlint --type-aware .",
+    "lint:fix": "oxlint --fix --type-aware .",
+    "format": "eslint -c eslint.stylistic.config.ts --concurrency=auto --fix .",
+    "prepublishOnly": "pnpm build",
+    "release": "pnpm publish",
+    "typecheck": "tsc --noEmit"
   },
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-typescript": "^12.1.2",
-    "coffee-script": "~1.6.3",
-    "color": "^5.0.0",
-    "fs-extra": "^11.3.0",
-    "glob": "^11.0.2",
-    "grunt": "^1.6.1",
-    "grunt-cli": "^1.5.0",
-    "grunt-contrib-coffee": "^2.1.0",
-    "grunt-contrib-compass": "^1.1.1",
-    "grunt-contrib-watch": "^1.1.0",
-    "grunt-terser": "^2.0.0",
-    "npm-run-all": "^4.1.5",
-    "rimraf": "^6.0.1",
-    "rollup": "^2.79.2",
-    "rollup-plugin-copy": "^3.5.0",
-    "rollup-plugin-terser": "^7.0.2",
-    "tslib": "^2.8.1",
-    "typescript": "^5.8.3"
+  "type": "module",
+  "version": "0.0.1",
+  "main": "./dist/main.js",
+  "module": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "exports": {
+    ".": "./dist/main.js",
+    "./package.json": "./package.json"
   }
 }
