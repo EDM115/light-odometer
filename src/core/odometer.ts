@@ -1019,28 +1019,20 @@ class LightOdometer {
   }
 
   /**
-   * Returns the entire current odometer object along with the global options.
-   * @returns {string} A string representation of the current odometer state.
+   * Returns the current odometer object along with the global options.
+   * @returns {string} A JSON-parseable string representation of the current odometer state.
    */
   toString(): string {
-    // Avoid serializing the HTMLElement directly (circular / large). Use an HTML snapshot instead.
-    const elSnapshot = (this.el && typeof (this.el).outerHTML === "string")
-      ? (this.el).outerHTML
-      : (() => {
-        try {
-          return JSON.stringify(this.el)
-        } catch {
-          // oxlint-disable-next-line no-base-to-string
-          return String(this.el)
-        }
-      })()
-
     const snapshot = {
-      el: elSnapshot,
       id: this.options.id,
       value: this.value,
       options: this.getOptions(),
       globalOptions: LightOdometer.getGlobalOptions(),
+      watchMutations: this.watchMutations,
+      transitionEndBound: this.transitionEndBound,
+      destroyed: this.destroyed,
+      format: this.format,
+      isAnimating: this.isAnimating,
     }
 
     return JSON.stringify(snapshot)
