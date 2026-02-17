@@ -1,4 +1,4 @@
-import type LightOdometer from "../core/odometer"
+import type { LightOdometer } from "../core/odometer"
 import type { LightOdometerEventDetail } from "../shared/interfaces"
 
 /**
@@ -159,7 +159,7 @@ function safeCancelRaf(id: number | NodeJS.Timeout | null | undefined): void {
 }
 
 /** Document ready helper */
-function onDocumentReady(cb: ()=> void): void {
+function onDocumentReady(cb: () => void): void {
   if (!isBrowser()) {
     return
   }
@@ -212,18 +212,18 @@ function initExistingOdometers(LightOdometerClass: typeof LightOdometer): void {
 }
 
 export {
-  createFromHTML,
-  removeClass,
   addClass,
-  trigger,
-  now,
-  round,
-  truncate,
+  createFromHTML,
   fractionalPart,
-  isBrowser,
-  safeRaf,
-  safeCancelRaf,
-  onDocumentReady,
-  initGlobalOptionsDeferred,
   initExistingOdometers,
+  initGlobalOptionsDeferred,
+  isBrowser,
+  now,
+  onDocumentReady,
+  round,
+  removeClass,
+  safeCancelRaf,
+  safeRaf,
+  trigger,
+  truncate,
 }

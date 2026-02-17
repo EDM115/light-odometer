@@ -1,40 +1,41 @@
 import type {
   FormatObject,
-  LightOdometerOptions,
-  LightOdometerGlobalOptions,
   LightOdometerEventName,
+  LightOdometerGlobalOptions,
+  LightOdometerOptions,
 } from "../shared/interfaces"
 
 import {
-  DIGIT_HTML, FORMAT_MARK_HTML,
+  DIGIT_HTML,
+  FORMAT_MARK_HTML,
 } from "../shared/templates"
 
 import {
-  DIGIT_FORMAT,
-  FORMAT_PARSER,
-  DURATION,
-  FRAMES_PER_VALUE,
-  DIGIT_SPEEDBOOST,
-  FRAMERATE,
   COUNT_FRAMERATE,
+  DIGIT_FORMAT,
+  DIGIT_SPEEDBOOST,
+  DURATION,
+  FORMAT_PARSER,
+  FRAMERATE,
+  FRAMES_PER_VALUE,
 } from "../shared/settings"
 
 import {
-  createFromHTML,
-  removeClass,
   addClass,
-  trigger,
-  now,
-  round,
-  truncate,
-  initGlobalOptionsDeferred,
+  createFromHTML,
   initExistingOdometers,
+  initGlobalOptionsDeferred,
   isBrowser,
-  safeRaf,
+  now,
+  removeClass,
+  round,
   safeCancelRaf,
+  safeRaf,
+  trigger,
+  truncate,
 } from "../utils/utilities"
 
-class LightOdometer {
+export class LightOdometer {
   static options: LightOdometerGlobalOptions = (typeof window !== "undefined"
     ? (window.odometerOptions ?? {})
     : {})
@@ -64,7 +65,7 @@ class LightOdometer {
   private _countRafId?: number | NodeJS.Timeout
   private _msPerFrame!: number
   private _countMsPerFrame!: number
-  private _onTransitionEnd?: (ev: TransitionEvent)=> void
+  private _onTransitionEnd?: (ev: TransitionEvent) => void
 
   /**
    * Initializes a new instance of the LightOdometer class.
@@ -138,7 +139,7 @@ class LightOdometer {
 
       for (const property of WRAPPED_PROPS) {
         Object.defineProperty(this.el, property, {
-          "get": (): string => {
+          get: (): string => {
             if (property === "innerHTML") {
               return this.inside?.outerHTML ?? ""
             } else {
@@ -146,7 +147,7 @@ class LightOdometer {
               return this.inside?.innerText ?? this.inside?.textContent ?? ""
             }
           },
-          "set": (val: string) => {
+          set: (val: string) => {
             return this.update(val)
           },
         })
@@ -194,6 +195,7 @@ class LightOdometer {
       this.startWatchingMutations()
     } catch (_e) {
       // ? nothing
+      void 0
     }
   }
 
@@ -774,6 +776,7 @@ class LightOdometer {
         const incr = dist / denominator
         let cur = start
 
+        // oxlint-disable-next-line no-unmodified-loop-condition
         while ((dist > 0 && cur < end) || (dist < 0 && cur > end)) {
           frames.push(Math.round(cur))
           cur += incr

@@ -1,4 +1,4 @@
-import type LightOdometer from "../core/odometer"
+import type { LightOdometer } from "../core/odometer"
 
 /**
  * LightOdometer global options interface
@@ -32,7 +32,7 @@ export interface LightOdometerOptions {
   framerate?: number;
   countFramerate?: number;
   animation?: "count" | "slide";
-  formatFunction?: (value: number)=> string;
+  formatFunction?: (value: number) => string;
 }
 
 export type LightOdometerEventName = "odometerstart" | "odometerdone"

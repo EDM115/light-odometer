@@ -11,18 +11,23 @@
   ],
   "description": "for personal use only, see EDM115/website",
   "devDependencies": {
-    "@stylistic/eslint-plugin": "~5.3.1",
+    "@stylistic/eslint-plugin": "~5.8.0",
     "@types/node": "latest",
-    "@typescript-eslint/parser": "~8.44.0",
-    "eslint": "~9.35.0",
-    "oxlint": "~1.15.0",
-    "oxlint-tsgolint": "~0.2.0",
-    "tsdown": "~0.15.1",
-    "typescript": "~5.9.2",
-    "unplugin-unused": "~0.5.3"
+    "@typescript-eslint/parser": "~8.56.0",
+    "@typescript/native-preview": "latest",
+    "edm115-lint": "~0.1.6",
+    "eslint": "~10.0.0",
+    "jiti": "~2.6.1",
+    "oxlint": "~1.48.0",
+    "oxlint-tsgolint": "~0.14.0",
+    "tsdown": "~0.20.3",
+    "unplugin-unused": "~0.5.7"
   },
   "exports": {
-    ".": "./dist/main.js",
+    ".": {
+      "types": "./dist/light-odometer.d.ts",
+      "import": "./dist/light-odometer.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -48,10 +53,8 @@
   ],
   "homepage": "https://github.com/EDM115/light-odometer#readme",
   "license": "MIT",
-  "main": "./dist/main.js",
-  "module": "./dist/main.js",
   "name": "light-odometer",
-  "packageManager": "pnpm@10.16.1",
+  "packageManager": "pnpm@10.30.0",
   "publishConfig": {
     "access": "public"
   },
@@ -64,11 +67,9 @@
     "format": "eslint -c eslint.stylistic.config.ts --concurrency=auto --fix .",
     "lint": "oxlint --type-aware .",
     "lint:fix": "oxlint --fix --type-aware .",
-    "prepublishOnly": "pnpm build",
     "release": "pnpm publish",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "type": "module",
-  "types": "./dist/main.d.ts",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }

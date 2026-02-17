@@ -1,6 +1,6 @@
-const VALUE_HTML = "<span class=\"odometer-value\"></span>"
+const VALUE_HTML: string = "<span class=\"odometer-value\"></span>"
 
-const RIBBON_HTML
+const RIBBON_HTML: string
   = "<span class=\"odometer-ribbon\"><span class=\"odometer-ribbon-inner\">"
     + VALUE_HTML
     + "</span></span>"
@@ -10,8 +10,11 @@ const DIGIT_HTML: string
     + RIBBON_HTML
     + "</span></span>"
 
-const FORMAT_MARK_HTML = "<span class=\"odometer-formatting-mark\"></span>"
+const FORMAT_MARK_HTML: string = "<span class=\"odometer-formatting-mark\"></span>"
 
 export {
-  DIGIT_HTML, FORMAT_MARK_HTML,
+  DIGIT_HTML,
+  FORMAT_MARK_HTML,
+  RIBBON_HTML,
+  VALUE_HTML,
 }
