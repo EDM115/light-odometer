@@ -11,16 +11,15 @@
   ],
   "description": "for personal use only, see EDM115/website",
   "devDependencies": {
-    "@stylistic/eslint-plugin": "~5.8.0",
-    "@types/node": "latest",
-    "@typescript-eslint/parser": "~8.56.0",
+    "@stylistic/eslint-plugin": "~5.10.0",
+    "@typescript-eslint/parser": "~8.57.1",
     "@typescript/native-preview": "latest",
-    "edm115-lint": "~0.1.6",
-    "eslint": "~10.0.0",
+    "edm115-lint": "~0.2.0",
+    "eslint": "~10.1.0",
     "jiti": "~2.6.1",
-    "oxlint": "~1.48.0",
-    "oxlint-tsgolint": "~0.14.0",
-    "tsdown": "~0.20.3",
+    "oxlint": "~1.56.0",
+    "oxlint-tsgolint": "~0.17.1",
+    "tsdown": "~0.21.4",
     "unplugin-unused": "~0.5.7"
   },
   "exports": {
@@ -54,7 +53,7 @@
   "homepage": "https://github.com/EDM115/light-odometer#readme",
   "license": "MIT",
   "name": "light-odometer",
-  "packageManager": "pnpm@10.30.0",
+  "packageManager": "pnpm@10.32.1",
   "publishConfig": {
     "access": "public"
   },
@@ -65,11 +64,11 @@
   "scripts": {
     "build": "tsdown",
     "format": "eslint -c eslint.stylistic.config.ts --concurrency=auto --fix .",
-    "lint": "oxlint --type-aware .",
-    "lint:fix": "oxlint --fix --type-aware .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "release": "pnpm publish",
     "typecheck": "tsgo --noEmit"
   },
   "type": "module",
-  "version": "0.1.1"
+  "version": "0.1.2"
 }

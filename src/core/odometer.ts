@@ -61,8 +61,8 @@ export class LightOdometer {
   MAX_VALUES!: number
   digits: HTMLElement[] = []
   ribbons: Record<number, HTMLElement> = {}
-  private _rafId?: number | NodeJS.Timeout
-  private _countRafId?: number | NodeJS.Timeout
+  private _rafId?: number
+  private _countRafId?: number
   private _msPerFrame!: number
   private _countMsPerFrame!: number
   private _onTransitionEnd?: (ev: TransitionEvent) => void

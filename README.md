@@ -1,7 +1,12 @@
-# light-odometer ![NPM Version](https://img.shields.io/npm/v/light-odometer)
+<div align="center">
+
+# light-odometer
+![NPM Version](https://img.shields.io/npm/v/light-odometer) ![NPM Downloads](https://img.shields.io/npm/dt/light-odometer) [![More info](https://img.shields.io/badge/npmx-More_info-orange?logo=npm)](https://npmx.dev/light-odometer)
+
+</div>
 
 This project is made only for personal use, as a small and lightweight build of [tm-odometer](https://github.com/mtmarco87/tm-odometer), which is itself a fork of [HubSpot's odometer](https://github.com/HubSpot/odometer).  
-Do not use this, use [@mtmarco87](https://github.com/mtmarco87)'s package instead.  
+⚠️ Do not use this, use [@mtmarco87](https://github.com/mtmarco87)'s package instead.  
 Huge props to him for this TypeScript refactor !
 
 No theme is shipped here, no docs either.
@@ -14,7 +19,7 @@ For a quick overview in a real-world usage, see https://github.com/EDM115/websit
 - Added linting and formatting (OxLint + ESLint Stylistic)
 - Keep only the ESM build and switch to a default export
 - Better TS config and stricter types (no more `any` nor `as`)
-- Target ES2016 instead of ES2015
+- Target ES2023 instead of ES2015
 - Remove compatibility layers (Internet Explorer, jQuery)
 - Stabilize and simplify the interfaces
 - Use overall more optimized methods
@@ -26,7 +31,8 @@ For a quick overview in a real-world usage, see https://github.com/EDM115/websit
 - Each instance can now have an `id`
 - Ability to customize the framerate
   ```ts
-  const odo = new LightOdometer({ ..., framerate: 20 }) // default is 30, going above isn't recommended
+  const odo = new LightOdometer({ ..., framerate: 20 })
+  // default is 30, going above isn't recommended
   // use countFramerate if you use the `count` mode instead of `slide`
   ```
 - Ability to render once and destroy the instance
@@ -44,7 +50,7 @@ For a quick overview in a real-world usage, see https://github.com/EDM115/websit
   const odo = new LightOdometer({ ... })
   console.log(odo.getOptions().duration)
   odo.setOptions({ duration: 2000 })
-  
+
   console.log(LightOdometer.getGlobalOptions.selector)
   LightOdometer.setGlobalOptions({ selector: ".my-odometer" })
   ```
@@ -52,13 +58,13 @@ For a quick overview in a real-world usage, see https://github.com/EDM115/websit
   ```ts
   const odo = new LightOdometer({ ... })
   console.log(odo.isAnimating)
-  
+
   function onStart(e: Event) {
     const { detail } = e as CustomEvent<LightOdometerEventDetail>
     // detail.id, detail.value, detail.instance.isAnimating, ...
     console.log(`started animating to ${detail.value}`)
   }
-  
+
   function onDone(e: Event) {
     const { detail } = e as CustomEvent<LightOdometerEventDetail>
     console.log(`finished animating to ${detail.value}`)
@@ -74,5 +80,28 @@ For a quick overview in a real-world usage, see https://github.com/EDM115/websit
 - Print the instance in a JSON-friendly string
   ```ts
   const odo = new LightOdometer({ ... })
-  console.log(odo.toString()) // {"id":2,"value":157,"options":{"id":2,"value":0,"animation":"slide","duration":8000,"format":"( ddd)","framerate":20},"globalOptions":{},"watchMutations":false,"transitionEndBound":true,"destroyed":false,"format":{"repeating":" ","precision":0},"isAnimating":false}
+  console.log(odo.toString())
+  ```
+  ```json
+  {
+    "id": 2,
+    "value": 157,
+    "options": {
+      "id": 2,
+      "value": 0,
+      "animation": "slide",
+      "duration": 8000,
+      "format": "( ddd)",
+      "framerate": 20
+    },
+    "globalOptions": {},
+    "watchMutations": false,
+    "transitionEndBound": true,
+    "destroyed": false,
+    "format": {
+      "repeating": " ",
+      "precision": 0
+    },
+    "isAnimating": false
+  }
   ```

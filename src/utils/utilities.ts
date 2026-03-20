@@ -136,7 +136,7 @@ function isBrowser(): boolean {
 }
 
 /** Safe requestAnimationFrame fallback */
-function safeRaf(cb: FrameRequestCallback): number | NodeJS.Timeout {
+function safeRaf(cb: FrameRequestCallback): number {
   if (isBrowser() && typeof requestAnimationFrame === "function") {
     return requestAnimationFrame(cb)
   }
@@ -146,7 +146,7 @@ function safeRaf(cb: FrameRequestCallback): number | NodeJS.Timeout {
 }
 
 /** Safe cancel for requestAnimationFrame fallback */
-function safeCancelRaf(id: number | NodeJS.Timeout | null | undefined): void {
+function safeCancelRaf(id: number | null | undefined): void {
   if (id == null) {
     return
   }
