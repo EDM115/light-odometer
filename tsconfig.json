@@ -1,21 +1,33 @@
 {
   "compilerOptions": {
     "allowArbitraryExtensions": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     "declaration": true,
     "disableSizeLimit": true,
     "emitDeclarationOnly": true,
     "emitDecoratorMetadata": true,
+    "erasableSyntaxOnly": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "incremental": true,
     "isolatedDeclarations": true,
     "isolatedModules": true,
-    "lib": [ "DOM", "ESNext" ],
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
     "module": "preserve",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
     "noErrorTruncation": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUncheckedSideEffectImports": true,
     "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "preserveWatchOutput": true,
     "removeComments": true,
     "resolveJsonModule": true,
@@ -24,6 +36,11 @@
     "target": "ESNext",
     "verbatimModuleSyntax": true
   },
-  "include": [ "src" ],
-  "exclude": [ "node_modules", "dist" ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "include": [
+    "src"
+  ]
 }

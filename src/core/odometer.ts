@@ -296,9 +296,11 @@ export class LightOdometer {
       throw new Error("LightOdometer: Unparsable digit format")
     }
 
-    const [ _, repeating, radix, fractional ] = parsed
+    const repeating = parsed[1] ?? ""
+    const radix = parsed[2]
+    const fractional = parsed[3] ?? ""
 
-    const precision = fractional?.length || 0
+    const precision = fractional.length
 
     this.format = {
       repeating, radix, precision,
@@ -402,8 +404,10 @@ export class LightOdometer {
         parts[1] = ""
       }
 
+      const fractionalPart = parts[1] ?? ""
+
       for (let i = 0; i < this.format.precision; i++) {
-        if (!parts[1][i]) {
+        if (!fractionalPart[i]) {
           fixedValue += "0"
         }
       }
@@ -494,7 +498,7 @@ export class LightOdometer {
     } else if (!this.inside.children.length) {
       return this.inside.appendChild(digit)
     } else {
-      return this.inside.insertBefore(digit, this.inside.children[0])
+      return this.inside.insertBefore(digit, this.inside.firstElementChild)
     }
   }
 
@@ -559,6 +563,10 @@ export class LightOdometer {
         }
 
         const chr = this.format.repeating[this.format.repeating.length - 1]
+
+        if (chr == null) {
+          continue
+        }
 
         this.format.repeating = this.format.repeating.substring(
           0,
@@ -662,7 +670,9 @@ export class LightOdometer {
    */
   getDigitCount(...values: number[]): number {
     for (let i = 0; i < values.length; i++) {
-      values[i] = Math.abs(values[i])
+      const value = values[i] ?? 0
+
+      values[i] = Math.abs(value)
     }
 
     const max = Math.max(...values)
@@ -681,11 +691,13 @@ export class LightOdometer {
     const parser = /^-?\d*\.(\d*?)0*$/
 
     for (let i = 0; i < values.length; i++) {
-      const valueStr = values[i].toString()
+      const value = values[i] ?? 0
+      const valueStr = value.toString()
       const parts = parser.exec(valueStr)
+      const fractionalPart = parts?.[1] ?? ""
 
       values[i] = parts
-        ? parts[1].length
+        ? fractionalPart.length
         : 0
     }
 
@@ -793,7 +805,9 @@ export class LightOdometer {
 
       // We only care about the last digit
       for (let j = 0; j < frames.length; j++) {
-        frames[j] = Math.abs(frames[j] % 10)
+        const frame = frames[j] ?? 0
+
+        frames[j] = Math.abs(frame % 10)
       }
 
       digits.push(frames)
@@ -804,34 +818,46 @@ export class LightOdometer {
     const reversedDigits = digits.toReversed()
 
     for (let i = 0; i < reversedDigits.length; i++) {
-      let frames = reversedDigits[i]
+      let frames = reversedDigits[i] ?? []
 
       if (!this.digits[i]) {
         this.addDigit(" ", i >= fractionalCount)
       }
 
+      const digit = this.digits[i]
+
+      if (!digit) {
+        continue
+      }
+
       if (this.ribbons[i] === undefined) {
-        const ribbon = this.digits[i].querySelector<HTMLElement>(".odometer-ribbon-inner")
+        const ribbon = digit.querySelector<HTMLElement>(".odometer-ribbon-inner")
 
         if (ribbon) {
           this.ribbons[i] = ribbon
         }
       }
 
-      this.ribbons[i].textContent = ""
+      const ribbon = this.ribbons[i]
+
+      if (!ribbon) {
+        continue
+      }
+
+      ribbon.textContent = ""
 
       if (diff < 0) {
         frames = frames.toReversed()
       }
 
       for (let j = 0; j < frames.length; j++) {
-        const frame = frames[j]
+        const frame = frames[j] ?? 0
         const numEl = document.createElement("div")
 
         numEl.className = "odometer-value"
         numEl.textContent = frame.toString()
 
-        this.ribbons[i].appendChild(numEl)
+        ribbon.appendChild(numEl)
 
         if (j === frames.length - 1) {
           addClass(numEl, "odometer-last-value")
